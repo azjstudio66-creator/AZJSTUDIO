@@ -1,0 +1,270 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Interactive Login</title>
+  <style>
+    :root{
+      --bg:#e5e5e5;
+      --purple:#6332F6;
+      --orange:#FF7A3D;
+      --black:#1a1a1a;
+      --radius:24px;
+      --max-eye-move:6px;
+    }
+
+    /* Basic layout */
+    html,body{height:100%;margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,"Helvetica Neue",Arial}
+    body{
+      display:flex;align-items:center;justify-content:center;
+      background:var(--bg);padding:20px;box-sizing:border-box;
+    }
+    .container{
+      width:95vw;max-width:1000px;height:80vh;max-height:600px;
+      background:#fff;border-radius:var(--radius);overflow:hidden;
+      display:flex;box-shadow:0 20px 50px rgba(0,0,0,.1);
+    }
+
+    .visuals{
+      flex:1.2;background:var(--bg);display:flex;
+      align-items:flex-end;justify-content:center;padding-bottom:20px;position:relative;
+    }
+    .auth-form{
+      flex:1;padding:40px;display:flex;flex-direction:column;justify-content:center;
+    }
+
+    h1{font-size:2.2rem;margin:0 0 10px;color:var(--black)}
+    .field{margin-bottom:18px;position:relative}
+    label.sr-only{
+      position:absolute !important;height:1px;width:1px;padding:0;margin:-1px;overflow:hidden;
+      clip:rect(0,0,0,0);white-space:nowrap;border:0;
+    }
+    input[type="email"],
+    input[type="password"]{
+      width:100%;padding:12px 14px;border:1px solid #e6e6e6;border-radius:10px;
+      font-size:1rem;outline:none;box-sizing:border-box;
+    }
+    .input-row{display:flex;gap:8px;align-items:center}
+    .btn{
+      background:var(--black);color:#fff;border:none;padding:12px;border-radius:50px;
+      font-weight:700;cursor:pointer;width:100%;
+    }
+    .status{margin-top:12px;font-size:.95rem;color:#333;min-height:1.2em}
+    .error{color:#b00020}
+
+    /* SVG character styles */
+    .char{transition:transform .35s ease;transform-origin:bottom;will-change:transform}
+    .eye-white{fill:#fff}
+    .pupil{fill:#000;will-change:transform;transition:transform .06s linear}
+
+    /* Password toggle */
+    .pw-toggle{
+      background:transparent;border:1px solid #ddd;padding:8px;border-radius:8px;cursor:pointer;
+      font-size:.9rem;color:#333;
+    }
+
+    /* Responsive */
+    @media (max-width:600px){
+      .container{flex-direction:column;height:95vh}
+      .visuals{flex:0.8}
+      h1{font-size:1.5rem}
+    }
+
+    /* Reduced motion preference */
+    @media (prefers-reduced-motion:reduce){
+      .pupil,.char{transition:none !important}
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="visuals" id="scene" role="img" aria-label="Drei farbige Figuren schauen auf das Formular">
+      <svg viewBox="0 0 400 300" id="svg" style="width:100%;height:100%;" aria-hidden="false" focusable="false">
+        <g id="char-orange" class="char">
+          <path d="M30,280 Q30,150 130,150 Q230,150 230,280 Z" fill="var(--orange)"/>
+          <circle class="eye-white" cx="100" cy="210" r="10"/>
+          <circle class="pupil" cx="100" cy="210" r="5" data-eye="1"/>
+          <circle class="eye-white" cx="140" cy="210" r="10"/>
+          <circle class="pupil" cx="140" cy="210" r="5" data-eye="2"/>
+        </g>
+
+        <g id="char-purple" class="char">
+          <rect x="160" y="70" width="110" height="210" rx="10" fill="var(--purple)"/>
+          <circle class="eye-white" cx="195" cy="120" r="8"/>
+          <circle class="pupil" cx="195" cy="120" r="4" data-eye="3"/>
+          <circle class="eye-white" cx="235" cy="120" r="8"/>
+          <circle class="pupil" cx="235" cy="120" r="4" data-eye="4"/>
+        </g>
+
+        <g id="char-black" class="char">
+          <rect x="260" y="180" width="70" height="100" rx="8" fill="var(--black)"/>
+          <circle class="eye-white" cx="285" cy="235" r="7"/>
+          <circle class="pupil" cx="285" cy="235" r="3.5" data-eye="5"/>
+          <circle class="eye-white" cx="310" cy="235" r="7"/>
+          <circle class="pupil" cx="310" cy="235" r="3.5" data-eye="6"/>
+        </g>
+      </svg>
+    </div>
+
+    <form class="auth-form" id="loginForm" action="https://httpbin.org/post" method="POST" novalidate>
+      <h1>Welcome</h1>
+
+      <div class="field">
+        <label for="email" class="sr-only">E‑Mail</label>
+        <input id="email" name="email" type="email" placeholder="Email" required autocomplete="email" />
+      </div>
+
+      <div class="field input-row" style="align-items:center;">
+        <div style="flex:1">
+          <label for="password" class="sr-only">Passwort</label>
+          <input id="password" name="password" type="password" placeholder="Password" required autocomplete="current-password" />
+        </div>
+        <button type="button" class="pw-toggle" id="togglePw" aria-pressed="false" aria-label="Passwort anzeigen">Anzeigen</button>
+      </div>
+
+      <button type="submit" class="btn" id="submitBtn">Log In</button>
+
+      <div id="status" class="status" aria-live="polite"></div>
+    </form>
+  </div>
+
+  <script>
+    (function () {
+      const form = document.getElementById('loginForm');
+      const submitBtn = document.getElementById('submitBtn');
+      const statusEl = document.getElementById('status');
+      const passwordInput = document.getElementById('password');
+      const togglePw = document.getElementById('togglePw');
+
+      // --- Password toggle ---
+      togglePw.addEventListener('click', () => {
+        const isHidden = passwordInput.type === 'password';
+        passwordInput.type = isHidden ? 'text' : 'password';
+        togglePw.textContent = isHidden ? 'Verbergen' : 'Anzeigen';
+        togglePw.setAttribute('aria-pressed', String(isHidden));
+        // keep focus on password field for screen reader continuity
+        passwordInput.focus();
+      });
+
+      // --- Accessible submission with network handling ---
+      async function submitForm(event) {
+        event.preventDefault();
+        statusEl.classList.remove('error');
+        statusEl.textContent = '';
+        submitBtn.disabled = true;
+        submitBtn.textContent = 'Wird gesendet...';
+        try {
+          const formData = new FormData(form);
+          // You may want to validate more client-side before sending
+          const resp = await fetch(form.action, { method: 'POST', body: formData });
+          if (!resp.ok) {
+            throw new Error('Netzwerkfehler: ' + resp.status);
+          }
+          // optionally check response content, here we assume success
+          statusEl.textContent = 'Erfolgreich eingeloggt — Weiterleitung...';
+          // short delay so screen readers/visual users see the status
+          setTimeout(() => {
+            // Redirect only on success
+            window.location.href = 'https://azj-studio.my.canva.site/du-bist-eingeloggt';
+          }, 700);
+        } catch (err) {
+          console.error(err);
+          statusEl.classList.add('error');
+          statusEl.textContent = 'Fehler beim Senden. Bitte noch einmal versuchen.';
+          submitBtn.disabled = false;
+          submitBtn.textContent = 'Log In';
+        }
+      }
+      form.addEventListener('submit', submitForm);
+
+      // --- Eye movement using requestAnimationFrame (better perf) ---
+      const pupils = Array.from(document.querySelectorAll('.pupil'));
+      const svg = document.getElementById('svg');
+      let eyeCenters = []; // {x,y,el}
+      let lastResize = 0;
+
+      function computeEyeCenters() {
+        // For SVG circles, we can transform their coordinates to screen space using getBoundingClientRect.
+        eyeCenters = pupils.map(p => {
+          const rect = p.getBoundingClientRect();
+          return {
+            el: p,
+            cx: rect.left + rect.width / 2,
+            cy: rect.top + rect.height / 2,
+            maxMove: parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--max-eye-move')) || 6
+          };
+        });
+      }
+
+      // initial calc
+      computeEyeCenters();
+
+      // recalc on resize but throttle
+      window.addEventListener('resize', () => {
+        const t = Date.now();
+        if (t - lastResize > 120) {
+          computeEyeCenters();
+          lastResize = t;
+        }
+      });
+
+      // pointer tracking target
+      let target = { x: window.innerWidth/2, y: window.innerHeight/2 };
+      let pointerActive = false;
+
+      function onPointerMove(e) {
+        pointerActive = true;
+        target.x = e.clientX;
+        target.y = e.clientY;
+      }
+      // pointermove covers mouse/touch/pen in unified API
+      window.addEventListener('pointermove', onPointerMove, { passive: true });
+
+      // Focus/blur behavior: compress pupils and move characters
+      passwordInput.addEventListener('focus', () => {
+        pupils.forEach(p => p.style.transform = 'scaleY(0.12)');
+        document.getElementById('char-orange').style.transform = 'translateX(-20px) rotate(-10deg)';
+        document.getElementById('char-purple').style.transform = 'translateY(15px)';
+        document.getElementById('char-black').style.transform = 'translateX(20px) rotate(10deg)';
+      });
+      passwordInput.addEventListener('blur', () => {
+        pupils.forEach(p => p.style.transform = 'none');
+        document.getElementById('char-orange').style.transform = 'none';
+        document.getElementById('char-purple').style.transform = 'none';
+        document.getElementById('char-black').style.transform = 'none';
+      });
+
+      // animation loop
+      (function loop() {
+        // interpolate pupil position toward target smoothly
+        const ease = 0.22;
+        eyeCenters.forEach((eye) => {
+          // compute vector from eye center to target
+          const dx = target.x - eye.cx;
+          const dy = target.y - eye.cy;
+          // angle
+          const angle = Math.atan2(dy, dx);
+          // desired offset
+          const distance = Math.min(eye.maxMove, Math.hypot(dx, dy) / 30);
+          const ox = Math.cos(angle) * distance;
+          const oy = Math.sin(angle) * distance;
+          // apply transform
+          eye.el.style.transform = `translate(${ox}px, ${oy}px)`;
+        });
+        requestAnimationFrame(loop);
+      }());
+
+      // For keyboard-only users, center eyes on form focus
+      document.getElementById('email').addEventListener('focus', () => {
+        // attract eyes to center of the form
+        const rect = form.getBoundingClientRect();
+        target.x = rect.left + rect.width / 2;
+        target.y = rect.top + rect.height / 2;
+      });
+
+      // If JS is disabled, the form will still submit (we used no other required JS-only features)
+    })();
+  </script>
+</body>
+</html>
