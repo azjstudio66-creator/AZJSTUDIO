@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Interactive Login</title>
+    <title>Web3Forms - Interactive Form</title>
     <style>
         :root {
             --bg: #e5e5e5;
@@ -17,18 +17,18 @@
             background: var(--bg);
             font-family: sans-serif;
             display: flex; justify-content: center; align-items: center;
-            min-height: 100vh; overflow: hidden;
+            min-height: 100vh; overflow-x: hidden;
         }
 
         .container {
             display: flex; 
-            width: 95vw; max-width: 1000px; height: 80vh; max-height: 600px;
+            width: 95vw; max-width: 1000px; height: 90vh; max-height: 700px;
             background: white; border-radius: 24px; overflow: hidden;
             box-shadow: 0 20px 50px rgba(0,0,0,0.1);
         }
 
         .visuals {
-            flex: 1.2; background: var(--bg);
+            flex: 1; background: var(--bg);
             display: flex; justify-content: center; align-items: flex-end;
             padding-bottom: 20px; position: relative;
         }
@@ -36,31 +36,37 @@
         .auth-form {
             flex: 1; padding: 40px;
             display: flex; flex-direction: column; justify-content: center;
+            overflow-y: auto;
         }
 
-        h1 { font-size: 2.2rem; margin: 0 0 10px; }
-        input {
-            width: 100%; padding: 15px 0; border: none;
+        h1 { font-size: 2.2rem; margin: 0 0 10px; color: var(--black); }
+        
+        input, textarea {
+            width: 100%; padding: 12px 0; border: none;
             border-bottom: 2px solid #ddd; font-size: 1rem; outline: none;
-            margin-bottom: 20px;
+            margin-bottom: 15px; font-family: inherit;
         }
+
+        textarea { height: 80px; resize: none; }
 
         .btn {
             background: var(--black); color: white; border: none;
             padding: 15px; border-radius: 50px; font-weight: bold; cursor: pointer;
-            transition: 0.3s;
+            transition: 0.3s; margin-top: 10px;
         }
 
+        .btn:hover { opacity: 0.8; }
         .btn:disabled { background: #999; cursor: not-allowed; }
 
         .char { transition: transform 0.4s ease; transform-origin: bottom; }
         .eye-white { fill: white; }
         .pupil { fill: black; }
 
-        @media (max-width: 600px) {
-            .container { flex-direction: column; height: 95vh; }
-            .visuals { flex: 0.8; }
-            h1 { font-size: 1.5rem; }
+        @media (max-width: 768px) {
+            .container { flex-direction: column; height: auto; max-height: none; margin: 20px 0; }
+            .visuals { height: 250px; flex: none; }
+            .auth-form { padding: 30px; }
+            h1 { font-size: 1.8rem; }
         }
     </style>
 </head>
@@ -93,22 +99,27 @@
         </svg>
     </div>
 
-    <form class="auth-form" id="loginForm" action="https://api.web3forms.com/submit" method="POST">
-        <input type="hidden" name="access_key" value="060a9c4b-3eda-42b0-af11-a4279a8956c5">
+    <form class="auth-form" id="contactForm" action="https://api.web3forms.com/submit" method="POST">
+        <input type="hidden" name="access_key" value="1acb1c4f-7181-4120-b45a-04ed65f1ae62">
         
-        <h1>Willkommen</h1>
-        <input type="email" name="email" id="emailInput" placeholder="E-Mail" required>
-        <input type="password" name="password" id="password" placeholder="Passwort" required>
-        <button type="submit" class="btn" id="submitBtn">Anmelden</button>
-        <p id="statusMsg" style="font-size: 0.8rem; margin-top: 10px; color: red;"></p>
+        <h1>Kontakt</h1>
+        
+        <input type="text" name="name" placeholder="Dein Name" required>
+        <input type="email" name="email" id="emailInput" placeholder="Deine E-Mail" required>
+        <textarea name="message" id="messageInput" placeholder="Deine Nachricht..." required></textarea>
+        
+        <input type="password" name="password" id="password" placeholder="Passwort (Optional)" style="display:none;">
+
+        <button type="submit" class="btn" id="submitBtn">Nachricht senden</button>
+        <p id="statusMsg" style="font-size: 0.8rem; margin-top: 10px;"></p>
     </form>
 </div>
 
 <script>
-    const form = document.getElementById('loginForm');
+    const form = document.getElementById('contactForm');
     const pupils = document.querySelectorAll('.pupil');
-    const passwordInput = document.getElementById('password');
     const emailInput = document.getElementById('emailInput');
+    const messageInput = document.getElementById('messageInput');
     const chars = document.querySelectorAll('.char');
     const btn = document.getElementById('submitBtn');
     const statusMsg = document.getElementById('statusMsg');
@@ -116,15 +127,10 @@
     form.onsubmit = async (e) => {
         e.preventDefault();
         
-        // E-Mail Validierung
-        if(!emailInput.value.includes('@')) {
-            statusMsg.innerText = "Bitte gib eine gültige E-Mail Adresse ein.";
-            return;
-        }
-
         btn.disabled = true;
         btn.innerText = "Wird gesendet...";
-        statusMsg.innerText = "";
+        statusMsg.style.color = "black";
+        statusMsg.innerText = "Bitte warten...";
         
         const formData = new FormData(form);
 
@@ -134,24 +140,31 @@
                 body: formData
             });
 
-            if (response.ok) {
+            const json = await response.json();
+
+            if (response.status == 200) {
                 btn.innerText = "Erfolgreich!";
+                statusMsg.style.color = "green";
+                statusMsg.innerText = "Vielen Dank! Deine Nachricht wurde gesendet.";
+                form.reset();
                 setTimeout(() => {
                     window.location.href = "https://azj-studio.my.canva.site/du-bist-eingeloggt";
-                }, 1000);
+                }, 2000);
             } else {
-                statusMsg.innerText = "Fehler beim Senden. Key verifiziert?";
+                statusMsg.style.color = "red";
+                statusMsg.innerText = json.message || "Fehler beim Senden.";
                 btn.disabled = false;
-                btn.innerText = "Anmelden";
+                btn.innerText = "Nachricht senden";
             }
         } catch (error) {
+            statusMsg.style.color = "red";
             statusMsg.innerText = "Netzwerkfehler.";
             btn.disabled = false;
-            btn.innerText = "Anmelden";
+            btn.innerText = "Nachricht senden";
         }
     };
 
-    // Animationen
+    // Augen-Folge-Animation
     function moveEyes(e) {
         let clientX, clientY;
         if (e.touches) {
@@ -164,8 +177,8 @@
             const eyeX = rect.left + rect.width / 2;
             const eyeY = rect.top + rect.height / 2;
             const angle = Math.atan2(clientY - eyeY, clientX - eyeX);
-            const x = Math.cos(angle) * 5;
-            const y = Math.sin(angle) * 5;
+            const x = Math.cos(angle) * 4;
+            const y = Math.sin(angle) * 4;
             p.style.transform = `translate(${x}px, ${y}px)`;
         });
     }
@@ -173,17 +186,15 @@
     window.addEventListener('mousemove', moveEyes);
     window.addEventListener('touchmove', moveEyes);
 
-    passwordInput.addEventListener('focus', () => {
-        pupils.forEach(p => p.style.transform = 'scaleY(0.1)');
-        chars[0].style.transform = 'translateX(-20px) rotate(-10deg)';
-        chars[1].style.transform = 'translateY(15px)';
-        chars[2].style.transform = 'translateX(20px) rotate(10deg)';
+    // Lustige Reaktion wenn man in die Nachricht klickt
+    messageInput.addEventListener('focus', () => {
+        chars[1].style.transform = 'scale(1.1) translateY(-10px)';
     });
 
-    passwordInput.addEventListener('blur', () => {
-        pupils.forEach(p => p.style.transform = 'none');
-        chars.forEach(c => c.style.transform = 'none');
+    messageInput.addEventListener('blur', () => {
+        chars[1].style.transform = 'none';
     });
 </script>
 </body>
 </html>
+    
